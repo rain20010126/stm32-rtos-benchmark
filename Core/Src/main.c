@@ -9,6 +9,8 @@
 #include "benchmark_sys.h"
 #include "control.h"
 
+#define BENCHMARK_MODE 1   // 1: benchmark, 0: production
+
 UART_HandleTypeDef huart2;
 
 /* Definitions for defaultTask */
@@ -199,13 +201,6 @@ void StartDefaultTask(void *argument)
   }
 }
 
-/* USER CODE BEGIN Header_StartTask02 */
-/**
-* @brief Function implementing the SensorTask thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_StartTask02 */
 void StartTask02(void *argument)
 {
   log_data_t data;
@@ -257,74 +252,75 @@ void StartTask02(void *argument)
           }
       }
     
-      osDelay(10);
+      // osDelay(10);
   }
 }
 
-/* USER CODE BEGIN Header_StartTask03 */
-/**
-* @brief Function implementing the LoggerTask thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_StartTask03 */
 void StartTask03(void *argument)
 {
-  log_data_t data;
-
-  // uint32_t last_tick = osKernelGetTickCount(); 
-
+  log_data_t data = {0};   // 防止未初始化
   static int counter = 0;
 
   for(;;)
   {
-    if (osMessageQueueGet(logQueueHandle, &data, NULL, 0) == osOK)
+#if BENCHMARK_MODE
+    // ================================
+    // [Benchmark Mode - Non-blocking]
+    // ================================
+    if (osMessageQueueGet(logQueueHandle, &data, NULL, 0) != osOK)
     {
-      // ================================
-      // [Benchmark Section]
-      // ================================
+        continue;  // no data → busy loop
+    }
+#else
+    // ================================
+    // [Production Mode - Blocking]
+    // ================================
+    if (osMessageQueueGet(logQueueHandle, &data, NULL, osWaitForever) != osOK)
+    {
+        continue;
+    }
+#endif
 
-      // // Count throughput (messages processed)
-      // benchmark_throughput_inc();
+    // ================================
+    // [Benchmark Section]
+    // ================================
 
-      // // T1: measure time from enqueue → dequeue
-      // uint32_t queue_cycles = benchmark_end(data.timestamp);
+#if BENCHMARK_MODE
+    // Count throughput
+    benchmark_throughput_inc();
 
-      // // Simulate processing workload (CPU-bound task)
-      // for (volatile int i = 0; i < 200000; i++);
+    // T1: queue latency
+    uint32_t queue_cycles = benchmark_end(data.timestamp);
 
-      // // T2: measure total latency (enqueue → processing done)
-      // uint32_t total_cycles = benchmark_end(data.timestamp);
+    // Simulate processing workload
+    for (volatile int i = 0; i < 200000; i++);
 
-      // // Pure processing time = total - queue waiting time
-      // uint32_t processing_cycles = total_cycles - queue_cycles;
+    // T2: total latency
+    uint32_t total_cycles = benchmark_end(data.timestamp);
 
-      // // Record max latency
-      // benchmark_latency_record(total_cycles);
+    uint32_t processing_cycles = total_cycles - queue_cycles;
 
-      // // Print benchmark result (convert cycles → microseconds)
-      // printf("queue=%lu us, proc=%lu us, total=%lu us\r\n",
-      //         queue_cycles / (CPU_FREQ / 1000000),
-      //         processing_cycles / (CPU_FREQ / 1000000),
-      //         total_cycles / (CPU_FREQ / 1000000));
+    benchmark_latency_record(total_cycles);
 
+    printf("[BENCH] queue=%lu us, proc=%lu us, total=%lu us\r\n",
+            queue_cycles / (CPU_FREQ / 1000000),
+            processing_cycles / (CPU_FREQ / 1000000),
+            total_cycles / (CPU_FREQ / 1000000));
+#endif
 
-      // ================================
-      // [Temperature Print Section]
-      // ================================
+    // ================================
+    // [Temperature Print Section]
+    // ================================
 
-      // Reduce print frequency (print every 10 samples)
-      if (++counter >= 10)
-      {
-          counter = 0;
+    if (++counter >= 10)
+    {
+        counter = 0;
 
-          int temp = data.sensor.temperature;
+        int temp = data.sensor.temperature;
 
-          // Print temperature in fixed-point format (xx.xx °C)
-          printf("T: %d.%02d\r\n",
-                  temp / 100,
-                  abs(temp % 100));
-      }
+        printf("T: %d.%02d\r\n",
+                temp / 100,
+                abs(temp % 100));
     }
   }
 }
