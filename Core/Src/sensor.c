@@ -42,14 +42,6 @@ static int read_calibration(void)
     uint8_t calib1[25];
     uint8_t calib2[16];
 
-    // if (HAL_I2C_Mem_Read(&hi2c1, BME680_ADDR, 0x89,
-    //                      I2C_MEMADD_SIZE_8BIT, calib1, 25, 100) != HAL_OK)
-    //     return -1;
-
-    // if (HAL_I2C_Mem_Read(&hi2c1, BME680_ADDR, 0xE1,
-    //                      I2C_MEMADD_SIZE_8BIT, calib2, 16, 100) != HAL_OK)
-    //     return -1;
-
     if (i2c_read_reg(BME680_ADDR, 0x89, calib1, 25) != 0)
     {
         printf("read1 fail\n");
@@ -142,8 +134,6 @@ int sensor_read_temperature(sensor_data_t *data)
     if (i2c_write(0x74, 0x25) != HAL_OK)
         return -1;
 
-    osDelay(50);
-
     // read temperature registers
     if (i2c_read_reg(BME680_ADDR, 0x22, buf, 3) != 0)
         return -1;
@@ -206,8 +196,6 @@ int sensor_read_pressure(sensor_data_t *data)
 
     if (i2c_write(0x74, 0x25) != 0)
         return -1;
-
-    osDelay(50);
 
     if (i2c_read_reg(BME680_ADDR, 0x1F, buf, 3) != 0)
         return -1;

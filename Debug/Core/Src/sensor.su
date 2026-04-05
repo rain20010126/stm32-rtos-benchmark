@@ -1,4 +1,6 @@
-../Core/Src/sensor.c:20:12:i2c_write	16	static
-../Core/Src/sensor.c:29:12:read_calibration	56	static
-../Core/Src/sensor.c:70:5:sensor_init	16	static
-../Core/Src/sensor.c:110:5:sensor_read	40	static
+../Core/Src/sensor.c:31:12:i2c_write	16	static
+../Core/Src/sensor.c:40:12:read_calibration	56	static
+../Core/Src/sensor.c:82:5:sensor_init	16	static
+../Core/Src/sensor.c:122:5:sensor_read_temperature	40	static
+../Core/Src/sensor.c:163:9:BME680_compensate_P	40	static
+../Core/Src/sensor.c:190:5:sensor_read_pressure	32	static

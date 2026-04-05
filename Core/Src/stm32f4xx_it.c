@@ -183,5 +183,23 @@ void SysTick_Handler(void)
 /******************************************************************************/
 
 /* USER CODE BEGIN 1 */
+void i2c_ev_irq_handler(void);
 
+void I2C1_EV_IRQHandler(void) //Interrupt Request Handler
+{   
+    i2c_ev_irq_handler(); 
+}
+
+void I2C1_ER_IRQHandler(void)
+{
+    uint32_t sr1 = I2C1->SR1;
+
+    if (sr1 & I2C_SR1_AF)
+    {
+        // printf("ACK FAIL\n");
+
+        I2C1->SR1 &= ~I2C_SR1_AF;
+        I2C1->CR1 |= I2C_CR1_STOP;
+    }
+}
 /* USER CODE END 1 */

@@ -5,6 +5,7 @@
 
 #include "sensor.h"
 #include "i2c.h"
+#include "i2c_driver.h"
 #include "benchmark_cpu.h"
 #include "benchmark_sys.h"
 #include "control.h"
@@ -69,7 +70,8 @@ int main(void)
   SystemClock_Config();
 
   MX_GPIO_Init();
-  MX_I2C1_Init();
+  // MX_I2C1_Init();
+  i2c_init();
   MX_USART2_UART_Init();
 
   benchmark_cpu_init();
@@ -225,7 +227,7 @@ void StartTask02(void *argument)
 
   for(;;)
   {   
-      if (sensor_read(&data.sensor) == 0)
+      if (sensor_read_temperature(&data.sensor) == 0)
       {   
           // simulate workload
           // for (volatile int i = 0; i < 50000; i++);
@@ -255,7 +257,7 @@ void StartTask02(void *argument)
 
 
               // osDelay(delay);
-              osDelay(50);
+              osDelay(1);
           }
           else
           {
@@ -333,9 +335,9 @@ void StartTask03(void *argument)
 
         int temp = data.sensor.temperature;
 
-        // printf("T: %d.%02d\r\n",
-                // temp / 100,
-                // abs(temp % 100));
+        printf("T: %d.%02d\r\n",
+                temp / 100,
+                abs(temp % 100));
     }
   }
 }
