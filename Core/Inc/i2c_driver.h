@@ -94,5 +94,6 @@ int i2c_read_reg_async(uint8_t dev, uint8_t reg, uint8_t *buf, int len, i2c_call
  * @return 1 if busy, 0 if idle
  */
 int i2c_is_busy(void);
+void i2c_os_init(void);
 
 #endif

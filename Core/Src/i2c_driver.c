@@ -14,6 +14,16 @@
 #include "i2c_driver.h"
 #include "stm32f4xx.h"
 #include <stdio.h>
+#include "cmsis_os2.h"
+
+static osSemaphoreId_t i2cSem;
+
+void i2c_os_init(void)
+{
+    i2cSem = osSemaphoreNew(1, 0, NULL);
+}
+
+
 
 // ======================================================
 // Type definitions
@@ -60,6 +70,12 @@ typedef struct {
 static i2c_ctx_t i2c;
 static i2c_callback_t i2c_cb = 0;
 
+static void i2c_done_cb(void)
+{
+    printf("I2C DONE\n");   // for debug
+    osSemaphoreRelease(i2cSem);
+}
+
 // ======================================================
 // Initialization
 // ======================================================
@@ -92,7 +108,10 @@ int i2c_read_reg(uint8_t dev, uint8_t reg, uint8_t *buf, int len)
     if (i2c_read_reg_async(dev, reg, buf, len, 0) != 0)
         return -1;
 
-    while (i2c_is_busy());
+    while (i2c_is_busy())
+    {
+        osDelay(1);
+    }
 
     return 0;
 }
@@ -104,7 +123,10 @@ int i2c_write_reg(uint8_t dev, uint8_t reg, uint8_t val)
     if (i2c_write_reg_async(dev, reg, val, 0) != 0)
         return -1;
 
-    while (i2c_is_busy());
+    while (i2c_is_busy())
+    {
+        osDelay(1);
+    }
 
     return 0;
 }

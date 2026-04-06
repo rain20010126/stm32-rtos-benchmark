@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include "i2c_driver.h"
 #include "i2c_driver_polling.h"
+#include "cmsis_os2.h"
 
 #define BME680_ADDR (0x76 << 1)
 
@@ -92,7 +93,7 @@ int sensor_init(void)
         return -1;
     }
 
-    HAL_Delay(10);
+    osDelay(10);
 
     // read chip id
     if (i2c_read_reg_polling(BME680_ADDR, 0xD0, &id, 1) != 0) {
@@ -100,7 +101,7 @@ int sensor_init(void)
         return -1;
     }
 
-    // printf("chip id = 0x%02X\n", id);
+    // printf("chip id = 0x%02X\n\n\n\n", id);
 
     if (id != 0x61) {
         printf("wrong chip id\n");

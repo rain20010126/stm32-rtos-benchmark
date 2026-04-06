@@ -80,6 +80,8 @@ int main(void)
 
   osKernelInitialize();
 
+  i2c_os_init(); 
+
   logQueueHandle = osMessageQueueNew (10, sizeof(log_data_t), &logQueue_attributes);
 
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
