@@ -1,6 +1,0 @@
-../Core/Src/benchmark_sys.c:15:6:benchmark_sys_init	8	static
-../Core/Src/benchmark_sys.c:25:6:benchmark_queue_update	16	static
-../Core/Src/benchmark_sys.c:31:6:benchmark_queue_drop	4	static
-../Core/Src/benchmark_sys.c:36:6:benchmark_latency_record	16	static
-../Core/Src/benchmark_sys.c:42:6:benchmark_throughput_inc	4	static
-../Core/Src/benchmark_sys.c:47:6:benchmark_sys_log	32	static

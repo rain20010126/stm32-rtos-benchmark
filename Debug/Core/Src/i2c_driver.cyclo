@@ -1,8 +1,0 @@
-../Drivers/CMSIS/Include/core_cm4.h:1684:22:__NVIC_EnableIRQ	2
-../Core/Src/i2c_driver.c:70:6:enable_interrupt	2
-../Core/Src/i2c_driver.c:120:5:i2c_read_reg	3
-../Core/Src/i2c_driver.c:132:5:i2c_write_reg	3
-../Core/Src/i2c_driver.c:148:5:i2c_is_busy	1
-../Core/Src/i2c_driver.c:160:5:i2c_write_reg_async	2
-../Core/Src/i2c_driver.c:199:5:i2c_read_reg_async	2
-../Core/Src/i2c_driver.c:246:6:i2c_ev_irq_handler	26

@@ -1,6 +1,0 @@
-../Core/Src/sensor.c:32:12:i2c_write	1
-../Core/Src/sensor.c:41:12:read_calibration	3
-../Core/Src/sensor.c:83:5:sensor_init	5
-../Core/Src/sensor.c:123:5:sensor_read_temperature	4
-../Core/Src/sensor.c:164:9:BME680_compensate_P	2
-../Core/Src/sensor.c:191:5:sensor_read_pressure	4

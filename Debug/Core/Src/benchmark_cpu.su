@@ -1,7 +1,0 @@
-../Core/Src/benchmark_cpu.c:23:13:dwt_init	4	static
-../Core/Src/benchmark_cpu.c:39:6:benchmark_cpu_init	8	static
-../Core/Src/benchmark_cpu.c:53:6:benchmark_calibrate_idle	8	static
-../Core/Src/benchmark_cpu.c:68:10:benchmark_get_cpu_usage	24	static
-../Core/Src/benchmark_cpu.c:90:6:benchmark_cpu_log	16	static
-../Core/Src/benchmark_cpu.c:100:10:benchmark_start	4	static
-../Core/Src/benchmark_cpu.c:108:10:benchmark_end	16	static
