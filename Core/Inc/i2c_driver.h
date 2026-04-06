@@ -30,7 +30,7 @@ typedef void (*i2c_callback_t)(void);
 /**
  * @brief Initialize I2C peripheral and interrupts
  */
-void i2c_init(void);
+void enable_interrupt(void);
 
 // ======================================================
 // Blocking API

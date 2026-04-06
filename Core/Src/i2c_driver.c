@@ -67,40 +67,8 @@ static i2c_callback_t i2c_cb = 0;
 /**
  * @brief Initialize I2C1 (GPIO + peripheral + interrupt)
  */
-void i2c_init(void)
+void enable_interrupt(void)
 {
-    // Enable GPIOB clock
-    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN;
-
-    // Configure PB8 (SCL), PB9 (SDA) as AF4
-    GPIOB->MODER &= ~((3 << (8*2)) | (3 << (9*2)));
-    GPIOB->MODER |=  ((2 << (8*2)) | (2 << (9*2)));
-
-    GPIOB->AFR[1] &= ~((0xF << ((8-8)*4)) | (0xF << ((9-8)*4)));
-    GPIOB->AFR[1] |=  ((4 << ((8-8)*4)) | (4 << ((9-8)*4)));
-
-    // Open-drain
-    GPIOB->OTYPER |= (1 << 8) | (1 << 9);
-
-    // Pull-up
-    GPIOB->PUPDR &= ~((3 << (8*2)) | (3 << (9*2)));
-    GPIOB->PUPDR |=  ((1 << (8*2)) | (1 << (9*2)));
-
-    // Enable I2C1 clock
-    RCC->APB1ENR |= RCC_APB1ENR_I2C1EN;
-
-    // Reset I2C
-    I2C1->CR1 |= I2C_CR1_SWRST;
-    I2C1->CR1 &= ~I2C_CR1_SWRST;
-
-    // Configure clock (16 MHz)
-    I2C1->CR2 = 16;
-    I2C1->CCR = 80;
-    I2C1->TRISE = 17;
-
-    // Enable peripheral
-    I2C1->CR1 |= I2C_CR1_PE;
-
     // Wait until bus is free
     while (I2C1->SR2 & I2C_SR2_BUSY);
 

@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "i2c_driver.h"
+#include "i2c_driver_polling.h"
 
 #define BME680_ADDR (0x76 << 1)
 
@@ -42,13 +43,13 @@ static int read_calibration(void)
     uint8_t calib1[25];
     uint8_t calib2[16];
 
-    if (i2c_read_reg(BME680_ADDR, 0x89, calib1, 25) != 0)
+    if (i2c_read_reg_polling(BME680_ADDR, 0x89, calib1, 25) != 0)
     {
         printf("read1 fail\n");
         return -1;
     }
 
-    if (i2c_read_reg(BME680_ADDR, 0xE1, calib2, 16) != 0)
+    if (i2c_read_reg_polling(BME680_ADDR, 0xE1, calib2, 16) != 0)
     {
         printf("read2 fail\n");
         return -1;
@@ -86,7 +87,7 @@ int sensor_init(void)
     // printf("sensor_init start\n");
 
     // soft reset
-    if (i2c_write(0xE0, 0xB6) != HAL_OK) {
+    if (i2c_write_reg_polling(BME680_ADDR, 0xE0, 0xB6) != 0) {
         printf("reset failed\n");
         return -1;
     }
@@ -94,7 +95,7 @@ int sensor_init(void)
     HAL_Delay(10);
 
     // read chip id
-    if (i2c_read_reg(BME680_ADDR, 0xD0, &id, 1) != 0) {
+    if (i2c_read_reg_polling(BME680_ADDR, 0xD0, &id, 1) != 0) {
         printf("read chip id failed\n");
         return -1;
     }
@@ -111,7 +112,7 @@ int sensor_init(void)
         return -1;
     }
 
-    // printf("sensor init OK\n");
+    printf("sensor init OK\n");
     return 0;
 }
 

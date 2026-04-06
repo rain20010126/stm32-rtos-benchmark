@@ -6,6 +6,7 @@
 #include "sensor.h"
 #include "i2c.h"
 #include "i2c_driver.h"
+#include "i2c_driver_polling.h"
 #include "benchmark_cpu.h"
 #include "benchmark_sys.h"
 #include "control.h"
@@ -71,7 +72,7 @@ int main(void)
 
   MX_GPIO_Init();
   // MX_I2C1_Init();
-  i2c_init();
+  i2c_init_polling();
   MX_USART2_UART_Init();
 
   benchmark_cpu_init();
@@ -221,6 +222,7 @@ void StartTask02(void *argument)
   log_data_t data;
 
   sensor_init();
+  enable_interrupt();
 
   // --- PI controller state ---
   // static int integral = 0;
@@ -346,8 +348,8 @@ void BenchmarkTask(void *argument)
 {
     for (;;)
     {
-        benchmark_sys_log();
-        benchmark_cpu_log();
+        // benchmark_sys_log();
+        // benchmark_cpu_log();
 
         osDelay(1000);   // 每秒印一次
     }

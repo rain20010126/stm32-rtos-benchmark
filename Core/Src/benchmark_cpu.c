@@ -52,14 +52,14 @@ void benchmark_cpu_init(void)
  */
 void benchmark_calibrate_idle(void)
 {
-    printf("Calibrating idle...\r\n");
+    // printf("Calibrating idle...\r\n");
 
     idle_counter = 0;
     osDelay(1000);  // 1 second window
 
     max_idle_per_sec = idle_counter;
 
-    printf("Idle baseline: %lu\r\n", max_idle_per_sec);
+    // printf("Idle baseline: %lu\r\n", max_idle_per_sec);
 }
 
 /**
