@@ -4,11 +4,11 @@
  *
  * Design:
  *   - Interrupt-driven state machine
- *   - Supports async + blocking APIs
- *   - Callback-based completion
+ *   - Async transaction + blocking wrapper
+ *   - FreeRTOS semaphore for synchronization
  *
- * Flow (read):
- *   START → ADDR_W → REG → RESTART → ADDR_R → READ → DONE
+ * Key idea:
+ *   Convert async interrupt I2C into blocking API without busy waiting
  */
 
 #include "i2c_driver.h"
@@ -18,20 +18,32 @@
 #include "FreeRTOS.h"
 #include "semphr.h"
 
+// ======================================================
+// RTOS Synchronization
+// ======================================================
+
+/**
+ * @brief Binary semaphore for transaction completion
+ *
+ * Used to block task until I2C transaction is finished (IRQ -> give)
+ */
 static SemaphoreHandle_t i2cSem;
 
 void i2c_os_init(void)
-{   
+{
     i2cSem = xSemaphoreCreateBinary();
-    // printf("sem addr = %p\n", i2cSem);
 }
 
-
-
 // ======================================================
-// Type definitions
+// State Machine Definition
 // ======================================================
 
+/**
+ * @brief I2C transaction states
+ *
+ * Represents each stage of I2C communication.
+ * Driven by hardware flags (SR1).
+ */
 typedef enum {
     I2C_IDLE,
     I2C_START,
@@ -47,63 +59,81 @@ typedef enum {
     I2C_ERROR
 } i2c_state_t;
 
+// ======================================================
+// Transaction Context
+// ======================================================
+
 /**
  * @brief I2C transaction context
+ *
+ * Stores all runtime information for one I2C transfer.
  */
 typedef struct {
-    uint8_t dev;
-    uint8_t reg;
+    uint8_t dev;       // device address
+    uint8_t reg;       // register address
 
-    uint8_t *buf;
-    uint8_t tx_buf[4];
+    uint8_t *buf;      // data buffer
+    uint8_t tx_buf[4]; // temp buffer for write
 
-    int len;
-    int idx;
+    int len;           // total bytes
+    int idx;           // current index
 
-    int is_read;
+    int is_read;       // read or write
 
-    i2c_state_t state;
-    int busy;
+    i2c_state_t state; // current state
+    int busy;          // transaction in progress flag
 } i2c_ctx_t;
 
+
 // ======================================================
-// Global context
+// Global Context
 // ======================================================
 
 static i2c_ctx_t i2c;
 static i2c_callback_t i2c_cb = 0;
 
-static void i2c_done_cb(void)
-{
-    // printf("Before release\n");   // for debug
-    // printf("in IRQ = %lu\n", __get_IPSR());
-    
-    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-
-    xSemaphoreGiveFromISR(i2cSem, &xHigherPriorityTaskWoken);
-
-    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-
-    // printf("After release\n");
-}
-
 // ======================================================
-// Initialization
+// Completion Callback (ISR context)
 // ======================================================
 
 /**
- * @brief Initialize I2C1 (GPIO + peripheral + interrupt)
+ * @brief Called when I2C transaction finishes (inside IRQ)
+ *
+ * - Releases semaphore to wake blocked task
+ * - Uses FromISR API (mandatory in interrupt context)
+ */
+static void i2c_done_cb(void)
+{
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+    // Notify task that transaction is done
+    xSemaphoreGiveFromISR(i2cSem, &xHigherPriorityTaskWoken);
+
+    // Trigger context switch if needed
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+}
+
+
+// ======================================================
+// Interrupt Enable
+// ======================================================
+
+/**
+ * @brief Enable I2C interrupt (event + error)
+ *
+ * Must ensure bus is idle before enabling.
  */
 void enable_interrupt(void)
 {
     // Wait until bus is free
     while (I2C1->SR2 & I2C_SR2_BUSY);
 
-    // Enable interrupts
+    // Enable I2C interrupt sources
     I2C1->CR2 |= (I2C_CR2_ITEVTEN |
                   I2C_CR2_ITBUFEN |
                   I2C_CR2_ITERREN);
-    
+
+    // Set IRQ priority (lower than kernel)
     NVIC_SetPriority(I2C1_EV_IRQn, 6);
     NVIC_SetPriority(I2C1_ER_IRQn, 6);
 
@@ -112,58 +142,70 @@ void enable_interrupt(void)
 }
 
 // ======================================================
-// Blocking API (wrapper around async)
+// Blocking API (Wrapper)
 // ======================================================
 
+/**
+ * @brief Blocking read register
+ *
+ * Internally uses async API + semaphore synchronization.
+ *
+ * Flow:
+ *   1. Clear old semaphore token
+ *   2. Start async transaction
+ *   3. Block until ISR signals completion
+ */
 int i2c_read_reg(uint8_t dev, uint8_t reg, uint8_t *buf, int len)
 {
     i2c.is_read = 1;
 
-    // enable interrupt
-    // I2C1->CR2 |= (I2C_CR2_ITEVTEN |
-    //               I2C_CR2_ITBUFEN |
-    //               I2C_CR2_ITERREN);
-
+    // Clear stale semaphore (important!)
     while (uxSemaphoreGetCount(i2cSem) > 0)
     {
         xSemaphoreTake(i2cSem, 0);
     }
 
-    // start async transaction
+    // Start async transaction
     if (i2c_read_reg_async(dev, reg, buf, len, i2c_done_cb) != 0)
         return -1;
 
+    // Block until ISR releases semaphore
     xSemaphoreTake(i2cSem, portMAX_DELAY);
 
     return 0;
 }
 
+/**
+ * @brief Blocking write register
+ *
+ * Same concept as read: async + semaphore
+ */
 int i2c_write_reg(uint8_t dev, uint8_t reg, uint8_t val)
 {
     i2c.is_read = 0;
 
-    // I2C1->CR2 |= (I2C_CR2_ITEVTEN |
-    //               I2C_CR2_ITBUFEN |
-    //               I2C_CR2_ITERREN);
-
-    // clear old token
+    // Clear old semaphore token
     while (uxSemaphoreGetCount(i2cSem) > 0)
         xSemaphoreTake(i2cSem, 0);
 
+    // Start async write
     if (i2c_write_reg_async(dev, reg, val, i2c_done_cb) != 0)
         return -1;
 
-    // wait
+    // Wait for completion
     xSemaphoreTake(i2cSem, portMAX_DELAY);
-
 
     return 0;
 }
+
 
 // ======================================================
 // Utility
 // ======================================================
 
+/**
+ * @brief Check if I2C is busy
+ */
 int i2c_is_busy(void)
 {
     return i2c.busy;
@@ -174,15 +216,18 @@ int i2c_is_busy(void)
 // ======================================================
 
 /**
- * @brief Start async I2C write (register + 1 byte)
+ * @brief Start async write transaction
+ *
+ * Initializes context and triggers START condition.
  */
 int i2c_write_reg_async(uint8_t dev, uint8_t reg, uint8_t val, i2c_callback_t cb)
-{   
+{
     if (i2c.busy) return -1;
 
+    // Setup transaction
     i2c.dev = dev;
     i2c.reg = reg;
-    i2c.tx_buf[0] = val;   
+    i2c.tx_buf[0] = val;
     i2c.buf = i2c.tx_buf;
     i2c.len = 1;
     i2c.idx = 0;
@@ -190,11 +235,12 @@ int i2c_write_reg_async(uint8_t dev, uint8_t reg, uint8_t val, i2c_callback_t cb
     i2c.state = I2C_START;
     i2c.busy = 1;
 
-    // trigger START
+    // Trigger START condition (hardware)
     I2C1->CR1 |= I2C_CR1_START;
 
     return 0;
 }
+
 
 /**
  * @brief Start an asynchronous I2C register read transaction (interrupt-driven)
