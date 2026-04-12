@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "i2c_driver.h"
+#include "cmsis_os2.h"
 
 #define BME680_ADDR (0x76 << 1)
 
@@ -79,7 +80,7 @@ int sensor_init(void)
         return -1;
     }
 
-    HAL_Delay(10);
+    osDelay(10);
 
     // read chip id
     if (i2c_read_reg(BME680_ADDR, 0xD0, &id, 1) != 0) {
@@ -122,7 +123,6 @@ int sensor_read(sensor_data_t *data)
     if (i2c_write(0x74, 0x25) != HAL_OK)
         return -1;
 
-    HAL_Delay(50);
 
     // read temperature registers
     if (i2c_read_reg(BME680_ADDR, 0x22, buf, 3) != 0)

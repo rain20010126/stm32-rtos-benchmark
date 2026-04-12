@@ -255,7 +255,7 @@ void StartTask02(void *argument)
 
 
               // osDelay(delay);
-              osDelay(50);
+              osDelay(1);
           }
           else
           {
