@@ -12,8 +12,6 @@
 #include "control.h"
 #include "string.h"
 
-#define BENCHMARK_MODE 1   // 1: benchmark, 0: production
-
 UART_HandleTypeDef huart2;
 
 /* Definitions for defaultTask */
@@ -77,11 +75,12 @@ void BenchmarkTask(void *argument);
 void RxTask(void *argument);
 
 typedef enum {
-    MODE_TEMP,
-    MODE_BENCH
+    MODE_TEMP,     // human-readable output
+    MODE_BENCH,    // performance measurement
+    MODE_SILENT    // no output, pure data flow
 } system_mode_t;
 
-volatile system_mode_t current_mode = MODE_TEMP;
+volatile system_mode_t current_mode = MODE_SILENT;
 
 int main(void)
 {
@@ -312,66 +311,39 @@ void StartTask03(void *argument)
 
   for(;;)
   {
-#if BENCHMARK_MODE
-    // ================================
-    // [Benchmark Mode - Non-blocking]
-    // ================================
     if (osMessageQueueGet(logQueueHandle, &data, NULL, osWaitForever) != osOK)
     {
         continue; 
     }
-#else
-    // ================================
-    // [Production Mode - Blocking]
-    // ================================
-    if (osMessageQueueGet(logQueueHandle, &data, NULL, osWaitForever) != osOK)
+
+
+    if (current_mode == MODE_BENCH)
     {
-        continue;
+        benchmark_throughput_inc();
+
+        uint32_t total_cycles = benchmark_end(data.timestamp);
+        benchmark_latency_record(total_cycles);
     }
-#endif
 
-    // ================================
-    // [Benchmark Section]
-    // ================================
-
-#if BENCHMARK_MODE
-    // Count throughput
-    benchmark_throughput_inc();
-
-    // T1: queue latency
-    // uint32_t queue_cycles = benchmark_end(data.timestamp);
-
-    // // Simulate processing workload
-    // for (volatile int i = 0; i < 200000; i++);
-
-    // T2: total latency
-    uint32_t total_cycles = benchmark_end(data.timestamp);
-
-    // uint32_t processing_cycles = total_cycles - queue_cycles;
-
-    benchmark_latency_record(total_cycles);
-
-    // printf("[BENCH] queue=%lu us, proc=%lu us, total=%lu us\r\n",
-    //         queue_cycles / (CPU_FREQ / 1000000),
-    //         processing_cycles / (CPU_FREQ / 1000000),
-    //         total_cycles / (CPU_FREQ / 1000000));
-    
-#endif
-
-    // ================================
-    // [Temperature Print Section]
-    // ================================
-
-    if (++counter >= 10)
+    else if (current_mode == MODE_TEMP)
     {
-        counter = 0;
+        if (++counter >= 100)
+        {
+            counter = 0;
 
-        int temp = data.sensor.temperature;
+            int temp = data.sensor.temperature;
 
-        printf("T: %d.%02d\r\n",
-                temp / 100,
-                abs(temp % 100));
+            printf("T: %d.%02d\r\n",
+                    temp / 100,
+                    abs(temp % 100));
+        }
     }
+
+    else if (current_mode == MODE_SILENT)
+    {
+        // do nothing, just consume data
+    }
+
   }
 }
 
@@ -379,10 +351,13 @@ void BenchmarkTask(void *argument)
 {
     for (;;)
     {
-        // benchmark_sys_log();
-        // benchmark_cpu_log();
+        if (current_mode == MODE_BENCH)
+        {
+            benchmark_sys_log();
+            benchmark_cpu_log();
+        }
 
-        osDelay(1000); 
+        osDelay(1000);
     }
 }
 
@@ -411,6 +386,17 @@ void RxTask(void *argument)
                 {
                     current_mode = MODE_BENCH;
                     printf("Switch to BENCH mode\r\n");
+                }
+
+                else if (strcmp(cmd_buf, "silent") == 0)
+                {
+                    current_mode = MODE_SILENT;
+                    printf("Switch to SILENT mode\r\n");
+                }
+                
+                else
+                {
+                    printf("Unknown command: %s\r\n", cmd_buf);
                 }
 
                 idx = 0;
