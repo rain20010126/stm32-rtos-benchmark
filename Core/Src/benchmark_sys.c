@@ -2,8 +2,6 @@
 #include <stdio.h>
 #include "cmsis_os2.h"
 
-#define CYCLES_TO_US(cycles) ((cycles) * 1000000UL / CPU_FREQ)
-
 static uint32_t max_queue_depth = 0;
 static uint32_t queue_drop_count = 0;
 static uint32_t queue_drop_last = 0;
@@ -16,6 +14,11 @@ static uint32_t sensor_latency_min = 0xFFFFFFFF;
 static uint32_t sensor_latency_max = 0;
 static uint64_t sensor_latency_sum = 0;
 static uint32_t sensor_latency_count = 0;
+
+static uint32_t cycles_to_us(uint32_t cycles)
+{
+    return (uint32_t)(((uint64_t)cycles * 1000000ULL) / CPU_FREQ);
+}
 
 void benchmark_sys_init(void)
 {
@@ -76,13 +79,13 @@ void benchmark_sys_log(void)
         }
 
         printf("[SYS] tp=%lu | maxQ=%lu | drop=%lu (%lu/s) | sensor_avg=%lu us | sensor_min=%lu us | sensor_max=%lu us\r\n",
-               msg_count,
-               max_queue_depth,
-               queue_drop_count,
-               drop_per_sec,
-               CYCLES_TO_US(sensor_avg),
-               CYCLES_TO_US(sensor_latency_min),
-               CYCLES_TO_US(sensor_latency_max));
+        msg_count,
+        max_queue_depth,
+        queue_drop_count,
+        drop_per_sec,
+        cycles_to_us(sensor_avg),
+        cycles_to_us(sensor_latency_min),
+        cycles_to_us(sensor_latency_max));
 
         msg_count = 0;
 

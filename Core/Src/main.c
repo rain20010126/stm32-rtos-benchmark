@@ -235,7 +235,7 @@ void StartTask02(void *argument)
         int ret = sensor_read(&data.sensor);
 
         uint32_t sensor_cycles = benchmark_end(sensor_start);
-
+        
         benchmark_sensor_latency_record(sensor_cycles);
 
         if (ret == 0)
