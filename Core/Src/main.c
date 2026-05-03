@@ -244,7 +244,7 @@ void StartTask02(void *argument)
                 benchmark_queue_drop();
             }
 
-            osDelay(1);
+            osDelay(0);
         }
         else
         {

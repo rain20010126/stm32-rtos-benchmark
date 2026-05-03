@@ -2,9 +2,10 @@
 #include "stm32f4xx.h"
 #include <stdio.h>
 
-static int  i2c_start(void);
-static int  i2c_send_address(uint8_t addr);
-static int  i2c_write_byte(uint8_t data);
+static int i2c_start_wait_idle(void);
+static int i2c_repeated_start(void);
+static int i2c_send_address(uint8_t addr);
+static int i2c_write_byte(uint8_t data);
 static int i2c_read_byte(uint8_t *data, int ack);
 static void i2c_stop(void);
 
@@ -46,7 +47,7 @@ int i2c_read_reg(uint8_t dev, uint8_t reg, uint8_t *buf, int len)
 {
     if (len <= 0) return -1;
 
-    if (i2c_start() != 0)
+    if (i2c_start_wait_idle() != 0)
     {
         i2c_stop();
         return -4;
@@ -66,7 +67,7 @@ int i2c_read_reg(uint8_t dev, uint8_t reg, uint8_t *buf, int len)
     }
 
     // repeated start
-    if (i2c_start() != 0)
+    if (i2c_repeated_start() != 0)
     {
         i2c_stop();
         return -5;
@@ -103,11 +104,8 @@ int i2c_write_reg(uint8_t dev, uint8_t reg, uint8_t val)
 {
     int ret;
 
-    if (i2c_start() != 0)
+    if (i2c_start_wait_idle() != 0)
     {
-        printf("START failed: SR1=0x%04lX SR2=0x%04lX CR1=0x%04lX\r\n",
-           I2C1->SR1, I2C1->SR2, I2C1->CR1);
-
         i2c_stop();
         return -4;
     }
@@ -142,7 +140,50 @@ int i2c_write_reg(uint8_t dev, uint8_t reg, uint8_t val)
     return 0;
 }
 
-static int i2c_start(void)
+// static int i2c_start(void)
+// {
+//     uint32_t timeout = 100000;
+
+//     I2C1->CR1 |= I2C_CR1_START;
+
+//     while (!(I2C1->SR1 & I2C_SR1_SB))
+//     {
+//         if (--timeout == 0)
+//             return -1;
+//     }
+
+//     volatile uint32_t temp = I2C1->SR1;
+//     (void)temp;
+
+//     return 0;
+// }
+
+static int i2c_start_wait_idle(void)
+{
+    uint32_t timeout = 100000;
+
+    while (I2C1->SR2 & I2C_SR2_BUSY)
+    {
+        if (--timeout == 0)
+            return -2;
+    }
+
+    I2C1->CR1 |= I2C_CR1_START;
+
+    timeout = 100000;
+    while (!(I2C1->SR1 & I2C_SR1_SB))
+    {
+        if (--timeout == 0)
+            return -1;
+    }
+
+    volatile uint32_t temp = I2C1->SR1;
+    (void)temp;
+
+    return 0;
+}
+
+static int i2c_repeated_start(void)
 {
     uint32_t timeout = 100000;
 
@@ -241,7 +282,26 @@ static int i2c_read_byte(uint8_t *data, int ack)
 
 // --------------------------------
 
+static int i2c_stop_wait(void)
+{
+    uint32_t timeout = 100000;
+
+    I2C1->CR1 |= I2C_CR1_STOP;
+
+    while (I2C1->CR1 & I2C_CR1_STOP)
+    {
+        if (--timeout == 0)
+            return -1;
+    }
+
+    return 0;
+}
+
 static void i2c_stop(void)
 {
-    I2C1->CR1 |= I2C_CR1_STOP;
+    if (i2c_stop_wait() != 0)
+    {
+        printf("STOP wait failed: SR1=0x%04lX SR2=0x%04lX CR1=0x%04lX\r\n",
+            I2C1->SR1, I2C1->SR2, I2C1->CR1);
+    }
 }
