@@ -34,14 +34,6 @@ static int read_calibration(void)
     uint8_t calib1[25];
     uint8_t calib2[16];
 
-    // if (HAL_I2C_Mem_Read(&hi2c1, BME680_ADDR, 0x89,
-    //                      I2C_MEMADD_SIZE_8BIT, calib1, 25, 100) != HAL_OK)
-    //     return -1;
-
-    // if (HAL_I2C_Mem_Read(&hi2c1, BME680_ADDR, 0xE1,
-    //                      I2C_MEMADD_SIZE_8BIT, calib2, 16, 100) != HAL_OK)
-    //     return -1;
-
     if (i2c_read_reg(BME680_ADDR, 0x89, calib1, 25) != 0)
     {
         printf("read1 fail\n");
@@ -116,16 +108,12 @@ int sensor_init(void)
 
 int sensor_read(sensor_data_t *data)
 {   
-    uint32_t sensor_start = benchmark_start();   // [1] sensor total start
-    
     uint8_t buf[3];
     int ret;
 
     // ------------------------
     // I2C write #1
     // ------------------------
-    uint32_t i2c_start = benchmark_start();
-
     ret = i2c_write(0x75, 0x00);
     if (ret != 0)
     {
@@ -133,12 +121,9 @@ int sensor_read(sensor_data_t *data)
         return -1;
     }
 
-    benchmark_i2c_latency_record(benchmark_end(i2c_start));
-
     // ------------------------
     // I2C write #2
     // ------------------------
-    i2c_start = benchmark_start();
     
     ret = i2c_write(0x74, 0x25);
     if (ret != 0)
@@ -147,13 +132,10 @@ int sensor_read(sensor_data_t *data)
         return -2;
     }
 
-    benchmark_i2c_latency_record(benchmark_end(i2c_start));
 
     // ------------------------
     // I2C read
     // ------------------------
-    i2c_start = benchmark_start();
-
     // read temperature registers
     ret = i2c_read_reg(BME680_ADDR, 0x22, buf, 3);
     if (ret != 0)
@@ -161,8 +143,6 @@ int sensor_read(sensor_data_t *data)
         printf("read temp failed: %d\r\n", ret);
         return -3;
     }
-
-    benchmark_i2c_latency_record(benchmark_end(i2c_start));
 
     int32_t adc_T =
         ((int32_t)buf[0] << 12) |
@@ -182,12 +162,6 @@ int sensor_read(sensor_data_t *data)
     int32_t temp_comp = ((t_fine * 5) + 128) >> 8;
 
     data->temperature = temp_comp;
-
-
-    // ------------------------
-    // sensor total latency
-    // ------------------------
-    benchmark_sensor_latency_record(benchmark_end(sensor_start));
 
     return 0;
 }

@@ -1,8 +1,6 @@
-../Core/Src/benchmark_sys.c:21:6:benchmark_sys_init	8	static
-../Core/Src/benchmark_sys.c:31:6:benchmark_queue_update	16	static
-../Core/Src/benchmark_sys.c:37:6:benchmark_queue_drop	4	static
-../Core/Src/benchmark_sys.c:42:6:benchmark_latency_record	16	static
-../Core/Src/benchmark_sys.c:48:6:benchmark_throughput_inc	4	static
-../Core/Src/benchmark_sys.c:53:6:benchmark_sensor_latency_record	16	static
-../Core/Src/benchmark_sys.c:59:6:benchmark_i2c_latency_record	16	static
-../Core/Src/benchmark_sys.c:66:6:benchmark_sys_log	32	static
+../Core/Src/benchmark_sys.c:20:6:benchmark_sys_init	8	static
+../Core/Src/benchmark_sys.c:34:6:benchmark_queue_update	16	static
+../Core/Src/benchmark_sys.c:40:6:benchmark_queue_drop	4	static
+../Core/Src/benchmark_sys.c:45:6:benchmark_throughput_inc	4	static
+../Core/Src/benchmark_sys.c:50:6:benchmark_sensor_latency_record	32	static
+../Core/Src/benchmark_sys.c:62:6:benchmark_sys_log	56	static

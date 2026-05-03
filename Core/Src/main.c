@@ -230,7 +230,15 @@ void StartTask02(void *argument)
 
     for (;;)
     {
-        if (sensor_read(&data.sensor) == 0)
+        uint32_t sensor_start = benchmark_start();
+
+        int ret = sensor_read(&data.sensor);
+
+        uint32_t sensor_cycles = benchmark_end(sensor_start);
+
+        benchmark_sensor_latency_record(sensor_cycles);
+
+        if (ret == 0)
         {
             data.timestamp = benchmark_start();
 
@@ -292,18 +300,6 @@ void StartTask03(void *argument)
 
     // // Simulate processing workload
     // for (volatile int i = 0; i < 200000; i++);
-
-    // T2: total latency
-    uint32_t total_cycles = benchmark_end(data.timestamp);
-
-    // uint32_t processing_cycles = total_cycles - queue_cycles;
-
-    benchmark_latency_record(total_cycles);
-
-    // printf("[BENCH] queue=%lu us, proc=%lu us, total=%lu us\r\n",
-    //         queue_cycles / (CPU_FREQ / 1000000),
-    //         processing_cycles / (CPU_FREQ / 1000000),
-    //         total_cycles / (CPU_FREQ / 1000000));
     
 #endif
 
